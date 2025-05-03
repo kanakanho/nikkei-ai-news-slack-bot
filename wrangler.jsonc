@@ -1,0 +1,7 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nikkei-ai-news-slack-bot",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-05-02",
+  "compatibility_flags": ["nodejs_compat"]
+}
