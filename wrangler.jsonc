@@ -3,5 +3,8 @@
   "name": "nikkei-ai-news-slack-bot",
   "main": "src/index.ts",
   "compatibility_date": "2025-05-02",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": {
+    "crons": ["0 13,19 * * 1-5"]
+  }
 }

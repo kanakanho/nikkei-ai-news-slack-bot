@@ -1,11 +1,20 @@
 import { Hono } from "hono";
-import FetechLatesetNewsAttribute from "./FetechLatesetNewsAttribute";
-import FetechLatesetNewsURL from "./FetechLatesetNewsURL";
+import type { Context } from "hono";
+import type { BlankInput } from "hono/types";
+import NotificationSlackBot from "./NotificationSlackBot";
 
-type Bindings = {
+export type Bindings = {
   SLACK_WEBHOOK_URL: string;
   NIKKEI_NEWS_URL: string;
 };
+
+export type C = Context<
+  {
+    Bindings: Bindings;
+  },
+  "/api/v1/news",
+  BlankInput
+>;
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -14,64 +23,31 @@ app.get("/", (c) => {
 });
 
 app.get("/api/v1/news", async (c) => {
-  const slackWebhookUrl = c.env.SLACK_WEBHOOK_URL;
-  const nikkeiNewsUrl = c.env.NIKKEI_NEWS_URL;
-  const resNewsURL = await FetechLatesetNewsURL(nikkeiNewsUrl)
-    .then((url) => {
-      console.log(`${nikkeiNewsUrl}${url}`);
-      return `${nikkeiNewsUrl}${url}`;
-    })
-    .catch((error) => {
-      console.error("Error fetching news:", error);
-      return "";
-    });
-
-  const resNewsAttribute = await FetechLatesetNewsAttribute(resNewsURL)
-    .then((attribute) => {
-      return attribute;
-    })
-    .catch((error) => {
-      console.error("Error fetching news attribute:", error);
-      return {
-        title: "No title found",
-        articles: [{ title: "No articles found" }],
-        imageUrl: "No image found",
-      };
-    });
-
-  const value = resNewsAttribute.articles
-    .map((article) => {
-      return `・ ${article.title}`;
-    })
-    .join("\n");
-
-  const _ = await fetch(slackWebhookUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      text: "",
-      attachments: [
-        {
-          fields: [
-            {
-              title: resNewsAttribute.title,
-              value: `${value}\n${resNewsURL}`,
-            },
-          ],
-          image_url: resNewsAttribute.imageUrl,
-        },
-      ],
-    }),
-  }).catch((error) => {
-    console.error("Error sending message to Slack:", error);
+  const isSuccess = await NotificationSlackBot({
+    SLACK_WEBHOOK_URL: c.env.SLACK_WEBHOOK_URL,
+    NIKKEI_NEWS_URL: c.env.NIKKEI_NEWS_URL,
   });
 
-  if (!_) {
+  if (!isSuccess) {
     return c.json({ message: "Error sending message to Slack" }, 500);
   }
   return c.json({ message: "Message sent to Slack successfully" });
 });
 
-export default app;
+const scheduled = async (event: ScheduledEvent, env: Bindings) => {
+  const isSuccess = await NotificationSlackBot({
+    SLACK_WEBHOOK_URL: env.SLACK_WEBHOOK_URL,
+    NIKKEI_NEWS_URL: env.NIKKEI_NEWS_URL,
+  });
+
+  if (!isSuccess) {
+    console.error("Error sending message to Slack");
+  } else {
+    console.log("Message sent to Slack successfully");
+  }
+};
+
+export default {
+  fetch: app.fetch,
+  scheduled,
+};

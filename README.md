@@ -19,5 +19,5 @@ $ pnpm dev
 ## デプロイ
 
 ```sh
-$ pnpm deploy
+$ pnpm run deploy
 ```
