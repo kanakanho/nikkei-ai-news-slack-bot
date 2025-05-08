@@ -1,5 +1,4 @@
-import FetechLatesetNewsAttribute from "./FetechLatesetNewsAttribute";
-import FetechLatesetNewsURL from "./FetechLatesetNewsURL";
+import FetechAttentionNewsAttribute from "./FetechAttentionNewsAttribute";
 import type { Bindings } from "./index";
 
 export default async function NotificationSlackBot(bindings: Bindings): Promise<boolean> {
@@ -7,36 +6,25 @@ export default async function NotificationSlackBot(bindings: Bindings): Promise<
 
   const slackWebhookUrl = bindings.SLACK_WEBHOOK_URL;
   const nikkeiNewsUrl = bindings.NIKKEI_NEWS_URL;
-  const resNewsURL = await FetechLatesetNewsURL(nikkeiNewsUrl)
-    .then((url) => {
-      console.log(`${nikkeiNewsUrl}${url}`);
-      return `${nikkeiNewsUrl}${url}`;
-    })
-    .catch((error) => {
-      console.error("Error fetching news:", error);
-      return "";
-    });
 
-  console.log("resNewsURL", resNewsURL);
+  const resAttentionNewsAttribute = await FetechAttentionNewsAttribute(nikkeiNewsUrl);
 
-  const resNewsAttribute = await FetechLatesetNewsAttribute(resNewsURL)
-    .then((attribute) => {
-      return attribute;
-    })
-    .catch((error) => {
-      console.error("Error fetching news attribute:", error);
-      return {
-        title: "No title found",
-        articles: [{ title: "No articles found" }],
-        imageUrl: "No image found",
-      };
-    });
+  const fields = resAttentionNewsAttribute.map((news) => {
+    return {
+      title: news.title,
+      value: `${nikkeiNewsUrl}${news.href}`,
+      short: false,
+    };
+  });
 
-  const value = resNewsAttribute.articles
-    .map((article) => {
-      return `・ ${article.title}`;
-    })
-    .join("\n");
+
+  // text に所定のフォーマットで日時を入れる
+  // `${month}月${day}日 ${hour} の注目ニュース`
+  const date = new Date();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hour = date.getHours();
+  const title = `*${month}月${day}日 ${hour}時の注目ニュース*`;
 
   const res = await fetch(slackWebhookUrl, {
     method: "POST",
@@ -44,16 +32,10 @@ export default async function NotificationSlackBot(bindings: Bindings): Promise<
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      text: "",
+      text: title,
       attachments: [
         {
-          fields: [
-            {
-              title: resNewsAttribute.title,
-              value: `${value}\n${resNewsURL}`,
-            },
-          ],
-          image_url: resNewsAttribute.imageUrl,
+          fields,
         },
       ],
     }),
