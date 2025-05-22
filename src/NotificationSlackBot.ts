@@ -23,7 +23,7 @@ export default async function NotificationSlackBot(bindings: Bindings): Promise<
   const date = new Date();
   const month = date.getMonth() + 1;
   const day = date.getDate();
-  const hour = date.getHours();
+  const hour = date.getHours() + 9;
   const title = `*${month}月${day}日 ${hour}時の注目ニュース*`;
 
   const res = await fetch(slackWebhookUrl, {
